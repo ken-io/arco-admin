@@ -8,6 +8,21 @@
             {{ $t('groupForm.title.video') }}
           </template>
           <a-row :gutter="80">
+            <a-col :span="16">
+              <a-form-item
+                :label="$t('groupForm.form.label.video.mode')"
+                field="video.mode"
+              >
+                <SqlEditor v-model="sqlCode" height="100px" width="100%" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row>
+            <a-col :span="16">
+              <p>当前 SQL 代码: {{ sqlCode }}</p>
+            </a-col>
+          </a-row>
+          <a-row :gutter="80">
             <a-col :span="8">
               <a-form-item
                 :label="$t('groupForm.form.label.video.mode')"
@@ -265,6 +280,9 @@
   import { reactive, ref } from 'vue';
   import { FormInstance } from '@arco-design/web-vue/es/form';
   import useLoading from '@/hooks/loading';
+  import SqlEditor from '@/components/editor/sql-editor.vue';
+
+  const sqlCode = ref('SELECT * FROM arco_test;');
 
   interface Test {
     data: Map<string, any>;
