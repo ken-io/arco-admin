@@ -1,6 +1,6 @@
 <template>
   <Codemirror
-    v-model="localSqlCode"
+    v-model="localEditorData.SqlCode"
     :style="{ width: width, height: height }"
     placeholder="SQL code goes here..."
     :autofocus="true"
@@ -19,13 +19,20 @@
   import { Codemirror } from 'vue-codemirror';
   import { sql } from '@codemirror/lang-sql';
   import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
-  import { allSqlKeywords } from './sql-keywords';
+  import { allMySqlKeywords } from './mysql-keywords';
+  import { allMongoKeywords } from './mongodb-keywords';
+  import { allDuckDbKeywords } from './duckdb-keywords';
+
+  interface SqlEditorModel {
+    DbType: string;
+    SqlCode: string;
+  }
 
   // 定义组件的 props
   const props = defineProps({
     modelValue: {
-      type: String,
-      default: '',
+      type: Object as () => SqlEditorModel,
+      default: () => ({ DbType: 'MySQL', SqlCode: '' }),
     },
     width: {
       type: String,
@@ -40,27 +47,50 @@
   // 定义组件的 emits
   const emits = defineEmits(['update:modelValue']);
 
-  // 定义本地的 sqlCode 变量
-  const localSqlCode = ref(props.modelValue);
+  // 初始化本地状态
+  const localEditorData = ref<SqlEditorModel>({ ...props.modelValue });
 
-  // 创建自定义补全源
+  // 获取当前数据库类型对应的关键字
+  const getKeywordsForDbType = (dbType: string): string[] => {
+    switch (dbType.toUpperCase()) {
+      case 'MYSQL':
+        return allMySqlKeywords;
+      case 'MONGODB':
+        return allMongoKeywords;
+      case 'DUCKDB':
+        return allDuckDbKeywords;
+      default:
+        return [];
+    }
+  };
+
+  // 当前关键字列表
+  const currentKeywords = ref<string[]>(
+    getKeywordsForDbType(props.modelValue.DbType)
+  );
+
+  // 自定义补全源
   const sqlCompletionSource = (context: CompletionContext) => {
-    console.log('尝试触发代码提示，当前光标位置:', context.pos);
     const beforeCursor = context.state.doc
       .sliceString(0, context.pos)
       .trimEnd();
-    const lastWord = beforeCursor.split(/[,\s=]+/).pop() || '';
-    const filteredKeywords = allSqlKeywords.filter((keyword) =>
-      keyword.startsWith(lastWord.toUpperCase())
+    const lastWord = beforeCursor.split(/[,\s.\s=]+/).pop() || '';
+
+    // 将输入内容转为小写
+    const lastWordLower = lastWord.toLowerCase();
+    // 匹配关键字（忽略大小写）
+    const filteredKeywords = currentKeywords.value.filter((keyword) =>
+      keyword.toLowerCase().startsWith(lastWordLower)
     );
-    console.log('代码提示结果:', filteredKeywords);
     return {
       from: context.pos - lastWord.length,
-      options: filteredKeywords.map((keyword) => ({ label: keyword })),
+      options: filteredKeywords.map((keyword) => ({
+        label: keyword, // 提示内容保持原始大小写
+      })),
     };
   };
 
-  // 定义扩展配置
+  // 编辑器扩展配置
   const extensions = computed(() => {
     return [
       sql(), // 启用 SQL 语言支持
@@ -78,21 +108,24 @@
 
   // 处理代码变化事件
   const handleChange = (newDoc: string) => {
-    if (newDoc !== props.modelValue) {
-      emits('update:modelValue', newDoc);
-    }
+    localEditorData.value.SqlCode = newDoc;
+    emits('update:modelValue', { ...localEditorData.value });
   };
 
   // 监听父组件传递的 modelValue 变化
   watch(
     () => props.modelValue,
     (newValue) => {
-      if (newValue !== localSqlCode.value) {
-        localSqlCode.value = newValue;
+      if (JSON.stringify(newValue) !== JSON.stringify(localEditorData.value)) {
+        localEditorData.value = { ...newValue };
+        currentKeywords.value = getKeywordsForDbType(newValue.DbType); // 更新关键字
+        console.log('currentKeywords:', JSON.stringify(currentKeywords.value));
       }
-    }
+    },
+    { deep: true }
   );
 
+  // 日志方法
   const log = (eventName: string, event: any) => {
     console.log(`${eventName} event triggered:`, event);
   };

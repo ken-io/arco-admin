@@ -4,24 +4,35 @@
     <a-form ref="formRef" layout="vertical" :model="formData">
       <a-space direction="vertical" :size="16">
         <a-card class="general-card">
-          <template #title>
-            {{ $t('groupForm.title.video') }}
-          </template>
+          <template #title>通用设置</template>
+          <a-row :gutter="80">
+            <a-col :span="8">
+              <a-form-item label="数据库类型" field="video.mode">
+                <a-select id="dbType" v-model="editorModel.DbType">
+                  <a-option value="MySQL">MySQL</a-option>
+                  <a-option value="MongoDB">MongoDB</a-option>
+                  <a-option value="DuckDB">DuckDB</a-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
           <a-row :gutter="80">
             <a-col :span="16">
-              <a-form-item
-                :label="$t('groupForm.form.label.video.mode')"
-                field="video.mode"
-              >
-                <SqlEditor v-model="sqlCode" height="100px" width="100%" />
+              <a-form-item label="SQL 编辑器" field="video.mode">
+                <SqlEditor v-model="editorModel" height="100px" width="100%" />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row>
             <a-col :span="16">
-              <p>当前 SQL 代码: {{ sqlCode }}</p>
+              <p>当前 SQL 代码: {{ editorModel.SqlCode }}</p>
             </a-col>
           </a-row>
+        </a-card>
+        <a-card class="general-card">
+          <template #title>
+            {{ $t('groupForm.title.video') }}
+          </template>
           <a-row :gutter="80">
             <a-col :span="8">
               <a-form-item
@@ -282,7 +293,17 @@
   import useLoading from '@/hooks/loading';
   import SqlEditor from '@/components/editor/sql-editor.vue';
 
-  const sqlCode = ref('SELECT * FROM arco_test;');
+  // 定义接口
+  interface SqlEditorModel {
+    DbType: string;
+    SqlCode: string;
+  }
+
+  // 初始化数据模型
+  const editorModel = ref<SqlEditorModel>({
+    DbType: 'MySQL',
+    SqlCode: 'SELECT * FROM users;',
+  });
 
   interface Test {
     data: Map<string, any>;
